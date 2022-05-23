@@ -1,3 +1,5 @@
+require('dotenv').config()
+
 const express = require("express");
 const { Pool } = require("pg");
 const app = express();
@@ -7,7 +9,7 @@ const { v4: uuidv4 } = require("uuid");
 const config = {
   user: "sararincon",
   host: "localhost",
-  database: "alwaysmusic",
+  database: "alwaysmusic20",
   password: "postgres",
   port: 5432,
 };
@@ -19,8 +21,11 @@ app.use(express.urlencoded({ extended: true }));
 //  Read usuarios
 app.get("/usuarios", async (req, res) => {
   try {
-    const dbquery = "SELECT * FROM usuarios";
-    const data = await pool.query(dbquery);
+    const SQLQuery= {
+      rowMode: "array",
+      text:  "SELECT * FROM usuarios",
+  }
+    const data = await pool.query(SQLQuery);
     res.status(200).json({ count: data.rowCount, items: data.rows });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -29,39 +34,74 @@ app.get("/usuarios", async (req, res) => {
 
 //Create usuario
 app.post("/usuario", async (req, res) => {
+  try{
   const uid = uuidv4().slice(0, 6);
   const { nombre, rut, curso, nivel } = req.body;
-  const dbquery = `INSERT INTO usuarios ( nombre, rut, curso, nivel, uuid) VALUES ('${nombre}', '${rut}', '${curso}', '${nivel}', '${uid}')`;
-  const data = await pool.query(dbquery);
-  console.log(data);
+  const SQLQuery = {
+  text: "INSERT INTO usuarios ( nombre, rut, curso, nivel, uuid) VALUES ($1, $2, $3, $4, $5) RETURNING *;",
+  values: [nombre, rut, curso, nivel, uid],
+  }
+  const data = await pool.query(SQLQuery);
+  console.log(data.rows[0]);
   res.status(200).json({ message: "Estudiante creado correctamente" });
+}
+catch (error) {
+  res.status(500).json({ error: error.message })
+  }
 });
 
 //Update usuario
 app.patch("/usuario", async (req, res) => {
-  const { nombre, uid } = req.body;
-  const dbquery = `UPDATE usuarios SET nombre = '${nombre}' WHERE uuid = '${uid}'`;
-  const data = await pool.query(dbquery);
-  console.log(data);
+  try{
+    const { nombre, uid } = req.body;
+  const SQLQuery = {
+    text: "UPDATE usuarios SET nombre = $1 WHERE uuid = $2 RETURNING *;",
+    values: [nombre, uid],
+  }
+  const data = await pool.query(SQLQuery);
+  console.log("Registro modficado:", data.rows[0]);
   res.status(200).json({ message: "Estudiante actualizado correctamente" });
+
+  }catch (error) {
+    res.status(500).json({ error: error.message })
+    }
+
+  
 });
 
 //Delete usuario
 app.delete("/usuario/:uuid", async (req, res) => {
-  const { uuid } = req.params;
-  const dbquery = `DELETE FROM usuarios WHERE uuid = '${uuid}'`;
-  const data = await pool.query(dbquery);
-  console.log(data);
-  res.status(200).json({ message: "Estudiante eliminado correctamente" });
+
+  try{
+    const { uuid } = req.params;
+    const SQLQuery ={
+    text:  "DELETE FROM usuarios WHERE uuid = $1",
+    values: [uuid]
+}
+  const data = await pool.query(SQLQuery);
+  console.log("Registro Afectado:", data.rowCount);
+  res.status(200).json({ message: `Estudiante ${uuid} eliminado correctamente` });
+
+  }catch (error) {
+    res.status(500).json({ error: error.message })
+  }
 });
 
 //buscando usuario por uuid
 app.get("/usuario/:uuid", async (req, res) => {
-  const { uuid } = req.params;
-  const dbquery = `SELECT * FROM usuarios WHERE uuid = '${uuid}'`;
-  const data = await pool.query(dbquery);
+  try{
+    const { uuid } = req.params;
+      const SQLQuery ={
+      text: "SELECT * FROM usuarios WHERE uuid = $1",
+      values: [uuid]
+    }
+  const data = await pool.query(SQLQuery);
   console.log(data);
   res.status(200).json({ count: data.rowCount, items: data.rows });
+  }catch (error) {
+    res.status(500).json({ error: error.message })
+    console.log({ error: error.message })
+  }
 });
 
 app.listen(port, () => {
