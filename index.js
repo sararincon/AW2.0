@@ -15,6 +15,14 @@ const config = {
 };
 const pool = new Pool(config);
 
+class MyError extends Error {
+  constructor(code, message) {
+    super();
+    this.code = code;
+    this.message = message;
+  }
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -74,16 +82,21 @@ app.delete("/usuario/:uuid", async (req, res) => {
 
   try{
     const { uuid } = req.params;
-    const SQLQuery ={
+    if(!uuid) throw new MyError (400, 'Debes colocar un parametro UUID')
+    if(uuid.length !== 6) throw new MyError (400, 'Debes colocar un parametro UUID correcto')
+   
+    
+     await pool.query({
     text:  "DELETE FROM usuarios WHERE uuid = $1",
     values: [uuid]
-}
-  const data = await pool.query(SQLQuery);
-  console.log("Registro Afectado:", data.rowCount);
+});
   res.status(200).json({ message: `Estudiante ${uuid} eliminado correctamente` });
 
   }catch (error) {
-    res.status(500).json({ error: error.message })
+
+    console.log (error.code, error.message);
+    
+    res.status(error.code).json({ message: error.message })
   }
 });
 
@@ -91,11 +104,13 @@ app.delete("/usuario/:uuid", async (req, res) => {
 app.get("/usuario/:uuid", async (req, res) => {
   try{
     const { uuid } = req.params;
+    
       const SQLQuery ={
       text: "SELECT * FROM usuarios WHERE uuid = $1",
       values: [uuid]
     }
   const data = await pool.query(SQLQuery);
+  // if(!uuid) throw new MyError(400, 'UUID no existe')
   console.log(data);
   res.status(200).json({ count: data.rowCount, items: data.rows });
   }catch (error) {
