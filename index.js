@@ -33,21 +33,6 @@ function errorHandler(res, err) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Leyendo usuarios registrados
-app.get("/usuarios", async (req, res) => {
-  try {
-    const SQLQuery = {
-      rowMode: "array",
-      text: "SELECT * FROM usuarios",
-    };
-    const data = await pool.query(SQLQuery);
-    // console.log(data.rows);
-    res.status(200).json({ count: data.rowCount, items: data.rows });
-  } catch (error) {
-    errorHandler(res, error);
-  }
-});
-
 //Creando un usuario
 app.post("/usuario", async (req, res) => {
   try {
@@ -64,6 +49,40 @@ app.post("/usuario", async (req, res) => {
     console.log("Usuario Creado", data.rows[0]);
     // console.log(data);
     res.status(201).json({ message: "Estudiante creado correctamente" });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Leyendo usuarios registrados
+app.get("/usuarios", async (req, res) => {
+  try {
+    const SQLQuery = {
+      rowMode: "array",
+      text: "SELECT * FROM usuarios",
+    };
+    const data = await pool.query(SQLQuery);
+    // console.log(data.rows);
+    res.status(200).json({ count: data.rowCount, items: data.rows });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+//Buscando usuario por RUT
+app.get("/usuario/:rut", async (req, res) => {
+  try {
+    const { rut } = req.params;
+    if (!rut) throw new MyError(400, "Debes colocar un DNI Correcto");
+
+    //Query
+    const SQLQuery = {
+      text: "SELECT * FROM usuarios WHERE rut = $1",
+      values: [rut],
+    };
+    const data = await pool.query(SQLQuery);
+    console.log(data.rows[0]);
+    res.status(200).json({ count: data.rowCount, items: data.rows });
   } catch (error) {
     errorHandler(res, error);
   }
@@ -104,26 +123,6 @@ app.delete("/usuario/:uuid", async (req, res) => {
     res
       .status(200)
       .json({ message: `Estudiante ${uuid} eliminado correctamente` });
-  } catch (error) {
-    errorHandler(res, error);
-  }
-});
-
-//Buscando usuario por uuid
-app.get("/usuario/:uuid", async (req, res) => {
-  try {
-    const { uuid } = req.params;
-    if (!uuid) throw new MyError(400, "Debes colocar un parametro UUID");
-    if (uuid.length !== 6)
-      throw new MyError(400, "Debes colocar un parametro UUID correcto");
-    //Query
-    const SQLQuery = {
-      text: "SELECT * FROM usuarios WHERE uuid = $1",
-      values: [uuid],
-    };
-    const data = await pool.query(SQLQuery);
-    console.log(data.rows[0]);
-    res.status(200).json({ count: data.rowCount, items: data.rows });
   } catch (error) {
     errorHandler(res, error);
   }
